@@ -59,7 +59,7 @@
           }
 
           download(e.target.response, {
-            fileName: fileName
+            fileName: fileName,
             strMimeType: defaultMime
           });
 
