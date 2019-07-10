@@ -22,7 +22,7 @@
   }
 }(this, function () {
 
-	return function download(data, strFileName, strMimeType) {
+	return function download(data, strFileName, strMimeType, options) {
 
 		var self = window, // this script is only for browsers anyway...
 			defaultMime = "application/octet-stream", // this default mime also triggers iframe downloads
@@ -36,7 +36,7 @@
 			blob,
 			reader;
 			myBlob= myBlob.call ? myBlob.bind(self) : Blob ;
-	  
+
 		if(String(this)==="true"){ //reverse arguments, allowing download.bind(true, "text/xml", "export.xml") to act as a callback
 			payload=[payload, mimeType];
 			mimeType=payload[0];
@@ -44,40 +44,52 @@
 		}
 
 
-		if(url && url.length< 2048){ // if no filename and no mime, assume a url was passed as the only argument
-			fileName = url.split("/").pop().split("?")[0];
-			anchor.href = url; // assign href prop to temp anchor
-		  	if(anchor.href.indexOf(url) !== -1){ // if the browser determines that it's a potentially valid url path:
-        		var ajax=new XMLHttpRequest();
-        		ajax.open( "GET", url, true);
-        		ajax.responseType = 'blob';
-        		ajax.onload= function(e){ 
-				  download(e.target.response, fileName, defaultMime);
-				};
-        		setTimeout(function(){ ajax.send();}, 0); // allows setting custom ajax headers using the return:
-			    return ajax;
-			} // end if valid url?
-		} // end if url?
+    if(url && url.length< 2048){ // if no filename and no mime, assume a url was passed as the only argument
+      fileName = url.split("/").pop().split("?")[0];
+      anchor.href = url; // assign href prop to temp anchor
+      if(anchor.href.indexOf(url) !== -1){ // if the browser determines that it's a potentially valid url path:
+        var ajax=new XMLHttpRequest();
+        ajax.open( "GET", url, true);
+        ajax.responseType = 'blob';
+        ajax.onload= function(e){
+
+          if (options && options.useContentDispositionHeader) {
+            var header = e.target.getResponseHeader('content-disposition');
+
+            if (header) {
+              filename = header.match(/filename="(.+)"/)[1] || filename
+            }
+          }
+
+          download(e.target.response, fileName, defaultMime);
+
+        };
+
+        setTimeout(function(){ ajax.send();}, 0); // allows setting custom ajax headers using the return:
+
+        return ajax;
+      } // end if valid url?
+    } // end if url?
 
 
 		//go ahead and download dataURLs right away
 		if(/^data:([\w+-]+\/[\w+.-]+)?[,;]/.test(payload)){
-		
+
 			if(payload.length > (1024*1024*1.999) && myBlob !== toString ){
 				payload=dataUrlToBlob(payload);
 				mimeType=payload.type || defaultMime;
-			}else{			
+			}else{
 				return navigator.msSaveBlob ?  // IE10 can't do a[download], only Blobs:
 					navigator.msSaveBlob(dataUrlToBlob(payload), fileName) :
 					saver(payload) ; // everyone else can save dataURLs un-processed
 			}
-			
+
 		}else{//not data url, is it a string with special needs?
-			if(/([\x80-\xff])/.test(payload)){			  
+			if(/([\x80-\xff])/.test(payload)){
 				var i=0, tempUiArr= new Uint8Array(payload.length), mx=tempUiArr.length;
 				for(i;i<mx;++i) tempUiArr[i]= payload.charCodeAt(i);
 			 	payload=new myBlob([tempUiArr], {type: mimeType});
-			}		  
+			}
 		}
 		blob = payload instanceof myBlob ?
 			payload :
