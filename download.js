@@ -20,7 +20,11 @@
   }
 }(this, function () {
 
-  return function download(data, options = {}) {
+  return function download(data, options) {
+
+    if (!options) {
+      options = {};
+    }
 
     var self = window, // this script is only for browsers anyway...
         defaultMime = "application/octet-stream", // this default mime also triggers iframe downloads
@@ -59,7 +63,7 @@
           }
 
           download(e.target.response, {
-            fileName: fileName,
+            strFileName: fileName,
             strMimeType: defaultMime
           });
 
